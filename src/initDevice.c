@@ -172,8 +172,8 @@ void dataBusInit(void)
     // в режиме выхода с высокоимпендансным состоянием (Hi Z), 
     // чтобы не нарушать работу ОЗУ Микроши
 
-    uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
-    uint32_t cnf=0b01;  // Выход с открытым коллектором, высокоимпендансный режим
+    const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
+    const uint32_t cnf=0b01;  // Выход с открытым коллектором, высокоимпендансный режим
     GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos);
@@ -197,8 +197,8 @@ void systemPinsInit(void)
     GPIOA->CRH &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);
 
     // Пины работают на чтение как обычные входы
-    uint32_t mode=0b00; // Режим входа
-    uint32_t cnf=0b01;  // Режим плавающего входа, подтяжки нет
+    const uint32_t mode=0b00; // Режим входа
+    const uint32_t cnf=0b01;  // Режим плавающего входа, подтяжки нет
     GPIOA->CRH |= (mode << GPIO_CRH_MODE10_Pos)  | (cnf << GPIO_CRH_CNF10_Pos);
     GPIOA->CRH |= (mode << GPIO_CRH_MODE11_Pos)  | (cnf << GPIO_CRH_CNF11_Pos);
 }
