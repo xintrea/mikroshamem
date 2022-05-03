@@ -7,10 +7,11 @@
 
 // Прототипы используемых функций
 uint16_t readAddressBus(); // Чтение адреса с ША Микроши
+void msDelay(int ms);
 
 // Содержимое памяти
 #define START_MEM_ADDR 0x8000
-#define MEM_LEN 5
+#define MEM_LEN 16383
 uint8_t mem[MEM_LEN]={0x55, 0x00, 0xFF, 0x01, 0x20};
 
 
@@ -19,9 +20,18 @@ int main(void)
     // Начальные инициализации оборудования STM32 для работы с шинами Микроши
     clockInit();
     portClockInit();
-    addressBusInit();
-    dataBusInit();
-    systemPinsInit();
+    // addressBusInit();
+    // dataBusInit();
+    // systemPinsInit();
+    debugLedInit();
+
+    while (true) 
+    {
+        GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
+        msDelay(1000);
+        GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Low
+        msDelay(1000);
+    }
 
     // Флаг слежения за активностью шины данных
     // Если false - шина данных неактивна, и находится в высокоимпендансном состоянии
@@ -64,28 +74,31 @@ int main(void)
             // Нужно получить текущий адрес с ША
             uint16_t addr=readAddressBus();
 
-            // Если адрес в диапазоне эмуляции ПЗУ
-            if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
+            // Если адрес в диапазоне эмуляции ПЗУ,
+            // на шине данных выставляется нужный байт
+            // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
+            if( true )
             {
+                // Если ШД неактивна
+                if(dataBusActive==false)
+                {
+                    // ШД должна стать активной
+                    const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
+                    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
+                    GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
+                                  (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
+                                  (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
+                                  (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
+                                  (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
+                                  (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
+                                  (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
+                                  (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+                    
+                    dataBusActive=true;
+                }
+
                 // Байт, который будет выдан на ШД
-                uint8_t byte=mem[addr-START_MEM_ADDR];
-
-                // ШД должна стать активной
-                const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
-                const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
-                GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                              (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                              (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                              (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                              (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                              (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                              (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                              (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
-                
-                dataBusActive=true;
-
-
-                // На шине данных выставляется нужный байт
+                uint8_t byte=0xFF; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;

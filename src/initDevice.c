@@ -119,7 +119,7 @@ void addressBusInit(void)
 {
     // Захват с 16-битной шины адреса происходит через 6 пинов
     // через мультиплексор на двух микросхемах К533КП2
-    // Выбор банка адреса: A0 - PA8, A1 - PA9
+    // Выбор сегмента адреса: A0 - PA8, A1 - PA9
     // Адресная линия: A0 - PB3, A1 - PB4, A2 - PB6, A3 - PB7
 
 
@@ -158,7 +158,7 @@ void dataBusInit(void)
 {
     // Шина данных находится на пинах PB8-PB15
 
-    // Для начала сброс конфигурации всех портов в ноль
+    // Для начала сброс конфигурации всех 8 пинов в ноль
     GPIOB->CRH &= ~(GPIO_CRH_MODE8  | GPIO_CRH_CNF8);
     GPIOB->CRH &= ~(GPIO_CRH_MODE9  | GPIO_CRH_CNF9);
     GPIOB->CRH &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);
@@ -192,7 +192,7 @@ void systemPinsInit(void)
     // /32К - PA10
     // /RD  - PA11
 
-    // Для начала сброс конфигурации всех портов в ноль
+    // Для начала сброс конфигурации обеих пинов в ноль
     GPIOA->CRH &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);
     GPIOA->CRH &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);
 
@@ -202,3 +202,16 @@ void systemPinsInit(void)
     GPIOA->CRH |= (mode << GPIO_CRH_MODE10_Pos)  | (cnf << GPIO_CRH_CNF10_Pos);
     GPIOA->CRH |= (mode << GPIO_CRH_MODE11_Pos)  | (cnf << GPIO_CRH_CNF11_Pos);
 }
+
+
+// Отладочный светодиод на A0
+void debugLedInit(void)
+{
+    // Для начала сброс конфигурации пина в ноль
+    GPIOA->CRL &= ~(GPIO_CRL_MODE0 | GPIO_CRL_CNF0);
+
+    const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
+    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
+    GPIOA->CRL |= (mode << GPIO_CRL_MODE0_Pos)  | (cnf << GPIO_CRL_CNF0_Pos);
+}
+   

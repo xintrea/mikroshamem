@@ -6,5 +6,6 @@ void portClockInit(void);
 void addressBusInit(void);
 void dataBusInit(void);
 void systemPinsInit(void);
+void debugLedInit(void);
 
 #endif
