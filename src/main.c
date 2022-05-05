@@ -20,9 +20,9 @@ int main(void)
     // Начальные инициализации оборудования STM32 для работы с шинами Микроши
     clockInit();
     portClockInit();
-    // addressBusInit();
-    // dataBusInit();
-    // systemPinsInit();
+    addressBusInit();
+    dataBusInit();
+    systemPinsInit();
     debugLedInit();
 
     while (true) 
@@ -133,6 +133,7 @@ int main(void)
 
 
 // Функция не используется, оставлена для примера
+__attribute__((noinline, section(".ramfunc")))
 void msDelay(int ms)
 {
    while (ms-- > 0) {
@@ -144,6 +145,7 @@ void msDelay(int ms)
 
 
 // Чтение адреса с адресной шины Микроши
+__attribute__((noinline, section(".ramfunc")))
 uint16_t readAddressBus()
 {
     uint16_t addrOctet0 = 0;
