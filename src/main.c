@@ -7,11 +7,13 @@
 
 // Прототипы используемых функций
 uint16_t readAddressBus(); // Чтение адреса с ША Микроши
-void msDelay(int ms);
+void delayMs(int ms);
+void delayCycles(uint32_t cycles);
+
 
 // Содержимое памяти
 #define START_MEM_ADDR 0x8000
-#define MEM_LEN 16383
+#define MEM_LEN 5
 uint8_t mem[MEM_LEN]={0x55, 0x00, 0xFF, 0x01, 0x20};
 
 
@@ -25,13 +27,8 @@ int main(void)
     systemPinsInit();
     debugLedInit();
 
-    while (true) 
-    {
-        GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
-        msDelay(1000);
-        GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Low
-        msDelay(1000);
-    }
+    // Задержка, чтобы Микроша успела нормально включиться
+    delayMs(1000);
 
     // Флаг слежения за активностью шины данных
     // Если false - шина данных неактивна, и находится в высокоимпендансном состоянии
@@ -41,30 +38,49 @@ int main(void)
     while (true) 
     {
         // Проверка системных сигналов /32К и /RD
-        // Если они неактивны, ШД должна находиться в высокоимпендансном состоянии
+        // Если они неактивны, ШД должна находиться в режиме входа чтобы не влиять на ШД
         // и никаких действий происходить не должно
         uint32_t workAddrDiapason = GPIOA->IDR & (GPIO_IDR_IDR10_Msk | GPIO_IDR_IDR11_Msk);
         
         // Сигналы инверсны, значит и оба активных бита должны быть равны нулю, 
         // а остальные из-за маски нулевые
-        if(workAddrDiapason!=0) // Сигналы /32К и /RD физически не установлены в 0
+        if(workAddrDiapason!=0) // Если сигналы /32К и /RD физически не установлены в 0
         {
-            // Надо проследить чтобы ШД была в высокоимпедансном состоянии
+            // Надо проследить чтобы пины ШД были в состоянии входа
+            // чтобы они никак не влияли на ШД компьютера
             // и больше ничего не делать
             if(dataBusActive==true)
             {
-                const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
-                const uint32_t cnf=0b01;  // Выход с открытым коллектором, высокоимпендансный режим
-                GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                              (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                              (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                              (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                              (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                              (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                              (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                              (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
-                
+                const uint32_t mode=0b00; // Режим входа
+                const uint32_t cnf=0b01;  // Плавающий вход
+
+                // Текущие режимы всех ножек порта B
+                uint32_t statusB=GPIOB->CRH;
+
+                // Обнуление битов режима для ножек ШД
+                statusB &= ~(GPIO_CRH_MODE8_Msk  | GPIO_CRH_CNF8_Msk |
+                             GPIO_CRH_MODE9_Msk  | GPIO_CRH_CNF9_Msk |
+                             GPIO_CRH_MODE10_Msk | GPIO_CRH_CNF10_Msk |
+                             GPIO_CRH_MODE11_Msk | GPIO_CRH_CNF11_Msk |
+                             GPIO_CRH_MODE12_Msk | GPIO_CRH_CNF12_Msk |
+                             GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk |
+                             GPIO_CRH_MODE14_Msk | GPIO_CRH_CNF14_Msk |
+                             GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
+
+                // Установка битов режима
+                GPIOB->CRH = statusB | 
+                             (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
+                             (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
+                             (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
+                             (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
+                             (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
+                             (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
+                             (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
+                             (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
                 dataBusActive=false;
+
+                GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
             }
 
             continue;
@@ -72,7 +88,7 @@ int main(void)
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
             // Нужно получить текущий адрес с ША
-            uint16_t addr=readAddressBus();
+            // uint16_t addr=readAddressBus();
 
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
@@ -83,22 +99,59 @@ int main(void)
                 if(dataBusActive==false)
                 {
                     // ШД должна стать активной
-                    const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
+                    const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
                     const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
-                    GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                                  (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                                  (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                                  (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                                  (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                                  (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                                  (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                                  (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+                    // Текущие режимы всех ножек порта B
+                    uint32_t statusB=GPIOB->CRH;
+
+                    // Обнуление битов режима для ножек ШД
+                    statusB &= ~(GPIO_CRH_MODE8_Msk  | GPIO_CRH_CNF8_Msk |
+                                 GPIO_CRH_MODE9_Msk  | GPIO_CRH_CNF9_Msk |
+                                 GPIO_CRH_MODE10_Msk | GPIO_CRH_CNF10_Msk |
+                                 GPIO_CRH_MODE11_Msk | GPIO_CRH_CNF11_Msk |
+                                 GPIO_CRH_MODE12_Msk | GPIO_CRH_CNF12_Msk |
+                                 GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk |
+                                 GPIO_CRH_MODE14_Msk | GPIO_CRH_CNF14_Msk |
+                                 GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
+
+                    // Установка битов режима
+                    GPIOB->CRH = statusB | 
+                                 (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
+                                 (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
+                                 (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
+                                 (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
+                                 (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
+                                 (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
+                                 (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
+                                 (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+                    // Настройка одного пина 15, использовалось при отладке
+                    // uint32_t statusB=GPIOB->CRH;
+                    // statusB &= ~(GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk); // Обнуление битов режима
+                    // GPIOB->CRH = statusB | (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos); // Установка режима
                     
                     dataBusActive=true;
                 }
 
+                /*
+                static bool blinkFlag=false;
+                blinkFlag=!blinkFlag;
+                if(blinkFlag)
+                {
+                    GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
+                    GPIOB->BSRR = (1<<GPIO_BSRR_BS15_Pos); // Пин ШД7 включается
+                }                    
+                else
+                {
+                    GPIOA->BSRR = (1<<GPIO_BSRR_BR0_Pos); // Светодиод выключается
+                    GPIOB->BSRR = (1<<GPIO_BSRR_BR15_Pos); // Пин ШД7 вылючается
+                }
+                */
+
+
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0xFF; // mem[addr-START_MEM_ADDR];
+                uint8_t byte=0xAB; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
@@ -112,6 +165,7 @@ int main(void)
                 // Биты данных подмешиваются в значения всех пинов
                 allPins = allPins | dataPins;
 
+                // Биты данных выставляются на порту
                 GPIOB->ODR=allPins;
             }    
         }
@@ -133,14 +187,43 @@ int main(void)
 
 
 // Функция не используется, оставлена для примера
+// __attribute__((noinline, section(".ramfunc")))
+// void msDelay(int ms)
+// {
+//    while (ms-- > 0) {
+//       volatile int x=500;
+//       while (x-- > 0)
+//          __asm("nop");
+//    }
+// }
+
+
+// Функция задержки в микросекундах, размещается в ОЗУ
 __attribute__((noinline, section(".ramfunc")))
-void msDelay(int ms)
+void delayMs(int ms)
 {
-   while (ms-- > 0) {
-      volatile int x=500;
-      while (x-- > 0)
-         __asm("nop");
-   }
+  uint32_t cycles = ms * F_CPU / 9 / 1000;
+
+  __asm volatile (
+    "1: subs %[cycles], %[cycles], #1 \n"
+    "   bne 1b \n"
+    : [cycles] "+r"(cycles)
+  );
+}
+
+
+// Функция задержки в машинных тактах, размещается в ОЗУ
+__attribute__((noinline, section(".ramfunc")))
+void delayCycles(uint32_t cycles)
+{
+  cycles /= 4;
+
+  __asm volatile (
+    "1: subs %[cycles], %[cycles], #1 \n"
+    "   nop \n"
+    "   bne 1b \n"
+    : [cycles] "+l"(cycles)
+  );
 }
 
 
