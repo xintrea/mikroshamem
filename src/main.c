@@ -80,7 +80,7 @@ int main(void)
 
                 dataBusActive=false;
 
-                GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
+                // GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
             }
 
             continue;
@@ -151,7 +151,7 @@ int main(void)
 
 
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0xAB; // mem[addr-START_MEM_ADDR];
+                uint8_t byte=0xFF; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
