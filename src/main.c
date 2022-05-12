@@ -105,12 +105,21 @@ int main(void)
             // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
             if( true )
             {
+                // Байт, который будет выдан на ШД
+                uint8_t byte=0xAF; // mem[addr-START_MEM_ADDR];
+                // static bool odd=false;
+                // odd=!odd;
+                // if( odd )
+                //    byte=0xAA;
+                // else
+                //    byte=0xF5;
+
                 // Если ШД неактивна
                 if(dataBusActive==false)
                 {
                     // ШД должна стать активной
                     const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
-                    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
+                    // const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
 
                     // Текущие режимы всех ножек порта B
                     uint32_t statusB=GPIOB->CRH;
@@ -126,15 +135,18 @@ int main(void)
                                  GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
 
                     // Установка битов режима
+                    // 00 - Output PushPull, 01 - Output OpenDrain
+                    // Там где 1 - надо выставить PushPull
+                    // Там где 0 - надо выставить OpenDrain
                     GPIOB->CRH = statusB | 
-                                 (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                                 (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                                 (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                                 (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                                 (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                                 (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                                 (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                                 (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+                                 (mode << GPIO_CRH_MODE8_Pos)  | ( (0b00 | ( ~byte & 0b00000001      )) << GPIO_CRH_CNF8_Pos)  |
+                                 (mode << GPIO_CRH_MODE9_Pos)  | ( (0b00 | ((~byte & 0b00000010) >> 1)) << GPIO_CRH_CNF9_Pos)  |
+                                 (mode << GPIO_CRH_MODE10_Pos) | ( (0b00 | ((~byte & 0b00000100) >> 2)) << GPIO_CRH_CNF10_Pos) |
+                                 (mode << GPIO_CRH_MODE11_Pos) | ( (0b00 | ((~byte & 0b00001000) >> 3)) << GPIO_CRH_CNF11_Pos) |
+                                 (mode << GPIO_CRH_MODE12_Pos) | ( (0b00 | ((~byte & 0b00010000) >> 4)) << GPIO_CRH_CNF12_Pos) |
+                                 (mode << GPIO_CRH_MODE13_Pos) | ( (0b00 | ((~byte & 0b00100000) >> 5)) << GPIO_CRH_CNF13_Pos) |
+                                 (mode << GPIO_CRH_MODE14_Pos) | ( (0b00 | ((~byte & 0b01000000) >> 6)) << GPIO_CRH_CNF14_Pos) |
+                                 (mode << GPIO_CRH_MODE15_Pos) | ( (0b00 | ((~byte & 0b10000000) >> 7)) << GPIO_CRH_CNF15_Pos);
 
                     // Настройка одного пина 15, использовалось при отладке
                     // uint32_t statusB=GPIOB->CRH;
@@ -160,8 +172,7 @@ int main(void)
                 */
 
 
-                // Байт, который будет выдан на ШД
-                uint8_t byte=0xFF; // mem[addr-START_MEM_ADDR];
+                
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
