@@ -52,7 +52,7 @@ int main(void)
             if(dataBusActive==true)
             {
                 const uint32_t mode=0b00; // Режим входа
-                const uint32_t cnf=0b01;  // Плавающий вход
+                const uint32_t cnf=0b10;  // Вход с подтягиванием
 
                 // Текущие режимы всех ножек порта B
                 uint32_t statusB=GPIOB->CRH;
@@ -77,6 +77,16 @@ int main(void)
                              (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
                              (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
                              (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+                // Направление подтяжки - подтягивание к общему проводу
+                GPIOB->BRR = GPIO_ODR_ODR8_Msk |
+                             GPIO_ODR_ODR9_Msk |
+                             GPIO_ODR_ODR10_Msk |
+                             GPIO_ODR_ODR11_Msk |
+                             GPIO_ODR_ODR12_Msk |
+                             GPIO_ODR_ODR13_Msk |
+                             GPIO_ODR_ODR14_Msk |
+                             GPIO_ODR_ODR15_Msk;
 
                 dataBusActive=false;
 

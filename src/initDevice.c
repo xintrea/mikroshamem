@@ -172,7 +172,7 @@ void dataBusInit(void)
     // в режиме входа чтобы никак не влиять на ШД компьютера
 
     const uint32_t mode=0b00; // Режим входа
-    const uint32_t cnf=0b01;  // Плавающий вход, подтяжки нет
+    const uint32_t cnf=0b10;  // Вход с подтягиванием
     GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos);
