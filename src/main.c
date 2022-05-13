@@ -5,10 +5,17 @@
 #include "initDevice.h"
 
 
+// Выбор режима работы ножек на выход
+#define OMODE_PUSH_PULL  1
+#define OMODE_OPEN_DRAIN 2
+#define OMODE OMODE_PUSH_PULL
+
+
 // Прототипы используемых функций
 uint16_t readAddressBus(); // Чтение адреса с ША Микроши
 void delayMs(int ms);
 void delayCycles(uint32_t cycles);
+void mainLoop();
 
 
 // Содержимое памяти
@@ -30,10 +37,21 @@ int main(void)
     // Задержка, чтобы Микроша успела нормально включиться
     delayMs(1000);
 
+    mainLoop();
+
+    return 0;
+}
+
+
+__attribute__((noinline, section(".ramfunc")))
+void mainLoop()
+{
     // Флаг слежения за активностью шины данных
     // Если false - шина данных неактивна, и находится в высокоимпендансном состоянии
     // Если true - шина данных активна, на пинах выставлены какие-то данные
     bool dataBusActive=false;
+
+    bool isByteSet=false;
 
     while (true) 
     {
@@ -89,9 +107,11 @@ int main(void)
                              GPIO_ODR_ODR15_Msk;
 
                 dataBusActive=false;
-
-                // GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
+                
             }
+
+            isByteSet=false;
+            GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
 
             continue;
         }
@@ -103,19 +123,34 @@ int main(void)
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
             // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
-            if( true )
             {
+
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0xAF; // mem[addr-START_MEM_ADDR];
-                // static bool odd=false;
-                // odd=!odd;
-                // if( odd )
-                //    byte=0xAA;
-                // else
-                //    byte=0xF5;
+                uint8_t byte=0x11; // mem[addr-START_MEM_ADDR];
+
+                #if OMODE==OMODE_OPEN_DRAIN
+/*
+                static bool odd=false;
+
+                // Если установка байта начинается
+                if(isByteSet==false)
+                {
+                    // Признак четного байта переключается
+                    odd=!odd;
+
+                    isByteSet=true;
+
+                    GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
+                }
+
+                if( odd )
+                   byte=0xFF;
+                else
+                   byte=0x1F;
+*/
 
                 // Если ШД неактивна
-                if(dataBusActive==false)
+                // if(dataBusActive==false)
                 {
                     // ШД должна стать активной
                     const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
@@ -135,7 +170,7 @@ int main(void)
                                  GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
 
                     // Установка битов режима
-                    // 00 - Output PushPull, 01 - Output OpenDrain
+                    // Дл CNF: 00 - Output PushPull, 01 - Output OpenDrain
                     // Там где 1 - надо выставить PushPull
                     // Там где 0 - надо выставить OpenDrain
                     GPIOB->CRH = statusB | 
@@ -155,6 +190,48 @@ int main(void)
                     
                     dataBusActive=true;
                 }
+                #endif
+
+
+                #if OMODE==OMODE_PUSH_PULL
+
+                    // ШД должна стать активной
+                    const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
+                    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
+
+                    // Текущие режимы всех ножек порта B
+                    uint32_t statusB=GPIOB->CRH;
+
+                    // Обнуление битов режима для ножек ШД
+                    statusB &= ~(GPIO_CRH_MODE8_Msk  | GPIO_CRH_CNF8_Msk |
+                                 GPIO_CRH_MODE9_Msk  | GPIO_CRH_CNF9_Msk |
+                                 GPIO_CRH_MODE10_Msk | GPIO_CRH_CNF10_Msk |
+                                 GPIO_CRH_MODE11_Msk | GPIO_CRH_CNF11_Msk |
+                                 GPIO_CRH_MODE12_Msk | GPIO_CRH_CNF12_Msk |
+                                 GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk |
+                                 GPIO_CRH_MODE14_Msk | GPIO_CRH_CNF14_Msk |
+                                 GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
+
+                    // Установка битов режима
+                    GPIOB->CRH = statusB | 
+                                 (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
+                                 (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
+                                 (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
+                                 (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
+                                 (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
+                                 (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
+                                 (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
+                                 (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+                    // Настройка одного пина 15, использовалось при отладке
+                    // uint32_t statusB=GPIOB->CRH;
+                    // statusB &= ~(GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk); // Обнуление битов режима
+                    // GPIOB->CRH = statusB | (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos); // Установка режима
+                    
+                    dataBusActive=true;
+
+                #endif    
+
 
                 /*
                 static bool blinkFlag=false;
@@ -203,7 +280,6 @@ int main(void)
         // GPIOB->BRR = (1<<LED1); // Low
     }
 
-    return 0;
 }
 
 
