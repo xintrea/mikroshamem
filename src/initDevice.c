@@ -197,9 +197,13 @@ void systemPinsInit(void)
 
     // Пины работают на чтение как обычные входы
     const uint32_t mode=0b00; // Режим входа
-    const uint32_t cnf=0b01;  // Плавающий вход, подтяжки нет
+    const uint32_t cnf=0b10;  // 10 - Input Pull, 01 - Плавающий вход, подтяжки нет
     GPIOA->CRH |= (mode << GPIO_CRH_MODE10_Pos)  | (cnf << GPIO_CRH_CNF10_Pos);
     GPIOA->CRH |= (mode << GPIO_CRH_MODE11_Pos)  | (cnf << GPIO_CRH_CNF11_Pos);
+
+    // Установка Pull-Down
+    GPIOA->BSRR = (1<<GPIO_BSRR_BR10_Pos);
+    GPIOA->BSRR = (1<<GPIO_BSRR_BR11_Pos);
 }
 
 
