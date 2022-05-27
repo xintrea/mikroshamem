@@ -181,6 +181,16 @@ void dataBusInit(void)
     GPIOB->CRH |= (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos);
     GPIOB->CRH |= (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+    // Направление подтяжки - подтягивание к общему проводу
+    GPIOB->BRR = GPIO_ODR_ODR8_Msk |
+                 GPIO_ODR_ODR9_Msk |
+                 GPIO_ODR_ODR10_Msk |
+                 GPIO_ODR_ODR11_Msk |
+                 GPIO_ODR_ODR12_Msk |
+                 GPIO_ODR_ODR13_Msk |
+                 GPIO_ODR_ODR14_Msk |
+                 GPIO_ODR_ODR15_Msk;
 }
 
 
@@ -197,11 +207,11 @@ void systemPinsInit(void)
 
     // Пины работают на чтение как обычные входы
     const uint32_t mode=0b00; // Режим входа
-    const uint32_t cnf=0b10;  // 10 - Input Pull, 01 - Плавающий вход, подтяжки нет
+    const uint32_t cnf=0b10;  // 10 - вход с подтягиванием, 01 - Плавающий вход, подтяжки нет
     GPIOA->CRH |= (mode << GPIO_CRH_MODE10_Pos)  | (cnf << GPIO_CRH_CNF10_Pos);
     GPIOA->CRH |= (mode << GPIO_CRH_MODE11_Pos)  | (cnf << GPIO_CRH_CNF11_Pos);
 
-    // Установка Pull-Down
+    // Установка подтяжки к общему проводу (Pull-Down)
     GPIOA->BSRR = (1<<GPIO_BSRR_BR10_Pos);
     GPIOA->BSRR = (1<<GPIO_BSRR_BR11_Pos);
 }
@@ -214,7 +224,7 @@ void debugLedInit(void)
     GPIOA->CRL &= ~(GPIO_CRL_MODE0 | GPIO_CRL_CNF0);
 
     const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
-    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
+    const uint32_t cnf=0b00;  // 00 - Двухтактный выход (Output push-pull)
     GPIOA->CRL |= (mode << GPIO_CRL_MODE0_Pos)  | (cnf << GPIO_CRL_CNF0_Pos);
 }
    

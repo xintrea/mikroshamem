@@ -106,7 +106,7 @@ int main(void)
             // if( true )
             {
                 // Если ШД неактивна
-                // if(dataBusActive==false)
+                if(dataBusActive==false)
                 {
                     // ШД должна стать активной
                     const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
@@ -142,6 +142,8 @@ int main(void)
                     // GPIOB->CRH = statusB | (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos); // Установка режима
                     
                     dataBusActive=true;
+
+                    // GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
                 }
 
                 /*
@@ -159,8 +161,6 @@ int main(void)
                 }
                 */
 
-
-                GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
 
                 // Байт, который будет выдан на ШД
                 uint8_t byte=0x00; // mem[addr-START_MEM_ADDR];
