@@ -9,7 +9,7 @@
 uint16_t readAddressBus(); // Чтение адреса с ША Микроши
 void delayMs(int ms);
 void delayCycles(uint32_t cycles);
-
+void mainLoop();
 
 // Содержимое памяти
 #define START_MEM_ADDR 0x8000
@@ -22,6 +22,7 @@ int main(void)
     // Начальные инициализации оборудования STM32 для работы с шинами Микроши
     clockInit();
     portClockInit();
+    disableGlobalInterrupt();
     addressBusInit();
     dataBusInit();
     systemPinsInit();
@@ -30,6 +31,15 @@ int main(void)
     // Задержка, чтобы Микроша успела нормально включиться
     delayMs(1000);
 
+    mainLoop();
+
+    return 0;
+}
+
+
+__attribute__((noinline, section(".ramfunc")))
+void mainLoop()
+{
     // Флаг слежения за активностью шины данных
     // Если false - шина данных неактивна, и находится в высокоимпендансном состоянии
     // Если true - шина данных активна, на пинах выставлены какие-то данные
@@ -163,7 +173,7 @@ int main(void)
 
 
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0x00; // mem[addr-START_MEM_ADDR];
+                uint8_t byte=0x0F; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
@@ -193,11 +203,9 @@ int main(void)
         // GPIOB->BSRR = (1<<LED1); // Hi
         // GPIOB->BRR = (1<<LED1); // Low
     }
-
-    return 0;
 }
 
-
+ 
 // Функция не используется, оставлена для примера
 // __attribute__((noinline, section(".ramfunc")))
 // void msDelay(int ms)

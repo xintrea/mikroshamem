@@ -3,6 +3,7 @@
 
 int clockInit(void);
 void portClockInit(void);
+void disableGlobalInterrupt(void);
 void addressBusInit(void);
 void dataBusInit(void);
 void systemPinsInit(void);
