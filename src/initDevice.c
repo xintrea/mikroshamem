@@ -43,8 +43,8 @@ int clockInit(void)
   ////////////////////////////////
   
   // Настраиваем PLL
-  RCC->CFGR |= (0x07<<RCC_CFGR_PLLMULL_Pos) // PLL множитель равен 9
-            | (0x01<<RCC_CFGR_PLLSRC_Pos);  // Тактирование PLL от HSE
+  RCC->CFGR |= (0x07<<RCC_CFGR_PLLMULL_Pos) | // PLL множитель равен 9
+               (0x01<<RCC_CFGR_PLLSRC_Pos);   // Тактирование PLL от HSE
   
   
   RCC->CR |= (1<<RCC_CR_PLLON_Pos); // Запускаем PLL
@@ -77,9 +77,9 @@ int clockInit(void)
   FLASH->ACR |= (0x02<<FLASH_ACR_LATENCY_Pos); 
   
   // Делители
-  RCC->CFGR |= (0x00<<RCC_CFGR_PPRE2_Pos) // Делитель шины APB2 отключен
-            | (0x04<<RCC_CFGR_PPRE1_Pos)  // Делитель нишы APB1 равен 2
-            | (0x00<<RCC_CFGR_HPRE_Pos);  // Делитель AHB отключен
+  RCC->CFGR |= (0x00<<RCC_CFGR_PPRE2_Pos) | // Делитель шины APB2 отключен
+               (0x04<<RCC_CFGR_PPRE1_Pos) | // Делитель нишы APB1 равен 2
+               (0x00<<RCC_CFGR_HPRE_Pos);   // Делитель AHB отключен
   
   
   RCC->CFGR |= (0x02<<RCC_CFGR_SW_Pos); // Переключаемся на работу от PLL
@@ -162,6 +162,53 @@ void addressBusInit(void)
 
 // Первичная настройка шины данных
 void dataBusInit(void)
+{
+    // Шина данных находится на пинах PB8-PB15
+
+    // Для начала сброс конфигурации всех 8 пинов в ноль
+    GPIOB->CRH &= ~(GPIO_CRH_MODE8  | GPIO_CRH_CNF8);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE9  | GPIO_CRH_CNF9);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE12 | GPIO_CRH_CNF12);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE13 | GPIO_CRH_CNF13);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE14 | GPIO_CRH_CNF14);
+    GPIOB->CRH &= ~(GPIO_CRH_MODE15 | GPIO_CRH_CNF15);
+
+    // Сброс конфигурации шинного формирователя К555АП6
+    GPIOB->CRL &= ~(GPIO_CRL_MODE0 | GPIO_CRL_CNF0); // Линия сигнала EZ
+    GPIOB->CRL &= ~(GPIO_CRL_MODE1 | GPIO_CRL_CNF1); // Линия сигнала SED0/D1
+
+    uint32_t mode;
+    uint32_t cnf;
+
+    mode=0b11; // Режим выхода с максимально частотой 50MHz
+    cnf=0b00;  // Обычный двухтактный выход
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+
+    mode=0b11; // Режим выхода с максимально частотой 50MHz
+    cnf=0b00;  // Обычный двухтактный выход
+    GPIOB->CRL |= (mode << GPIO_CRL_MODE0_Pos)  | (cnf << GPIO_CRL_CNF0_Pos); // EZ
+    GPIOB->CRL |= (mode << GPIO_CRL_MODE1_Pos)  | (cnf << GPIO_CRL_CNF1_Pos); // SED0/D1
+
+    // Шинный формирователь должен по-умолчанию и большую часть времени 
+    // находиться в режиме третьего состояния
+    // чтобы плата никак не влияла на ШД компьютера
+    GPIOB->BSRR = (1<<GPIO_BSRR_BS0_Pos); // EZ=1 (передача выключена)
+    GPIOB->BSRR = (1<<GPIO_BSRR_BS1_Pos); // SED0/D1 в режим D0->Z0 (передача наружу)
+}
+
+
+// Перевод шины в режим подтяжки к общеу проводу
+// Функция оставлена как образец кода, не используется
+void dataBusPullDown(void)
 {
     // Шина данных находится на пинах PB8-PB15
 

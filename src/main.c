@@ -29,7 +29,7 @@ int main(void)
     debugLedInit();
 
     // Задержка, чтобы Микроша успела нормально включиться
-    delayMs(1000);
+    delayMs(500);
 
     mainLoop();
 
@@ -48,55 +48,19 @@ void mainLoop()
     while (true) 
     {
         // Проверка системных сигналов /32К и /RD
-        // Если они неактивны, пины STM должна быть в режиме входа чтобы не влиять на ШД
-        // и никаких действий происходить не должно
+        // Если они неактивны, сигнал EZ на шинном формирователе должны быть 1
+        // чтобы не влиять на ШД и никаких действий происходить не должно
         uint32_t workAddrDiapason = GPIOA->IDR & (GPIO_IDR_IDR10_Msk | GPIO_IDR_IDR11_Msk);
         
         // Сигналы инверсны, значит и оба активных бита должны быть равны нулю, 
         // а остальные из-за маски нулевые
         if(workAddrDiapason!=0) // Если сигналы /32К и /RD физически не установлены в 0
         {
-            // Надо проследить чтобы пины STM были в состоянии входа
-            // чтобы они никак не влияли на ШД компьютера
-            // и больше ничего не делать
+            // Надо проследить чтобы шинный формирователь был закрыт
+            // чтобы никак не влиять на ШД компьютера и больше ничего не делать
             if(dataBusActive==true)
             {
-                const uint32_t mode=0b00; // Режим входа
-                const uint32_t cnf=0b10;  // Вход с подтягиванием
-
-                // Текущие режимы всех ножек порта B
-                uint32_t statusB=GPIOB->CRH;
-
-                // Обнуление битов режима для ножек ШД
-                statusB &= ~(GPIO_CRH_MODE8_Msk  | GPIO_CRH_CNF8_Msk |
-                             GPIO_CRH_MODE9_Msk  | GPIO_CRH_CNF9_Msk |
-                             GPIO_CRH_MODE10_Msk | GPIO_CRH_CNF10_Msk |
-                             GPIO_CRH_MODE11_Msk | GPIO_CRH_CNF11_Msk |
-                             GPIO_CRH_MODE12_Msk | GPIO_CRH_CNF12_Msk |
-                             GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk |
-                             GPIO_CRH_MODE14_Msk | GPIO_CRH_CNF14_Msk |
-                             GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
-
-                // Установка битов режима
-                GPIOB->CRH = statusB | 
-                             (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                             (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                             (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                             (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                             (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                             (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                             (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                             (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
-
-                // Направление подтяжки - подтягивание к общему проводу
-                GPIOB->BRR = GPIO_ODR_ODR8_Msk |
-                             GPIO_ODR_ODR9_Msk |
-                             GPIO_ODR_ODR10_Msk |
-                             GPIO_ODR_ODR11_Msk |
-                             GPIO_ODR_ODR12_Msk |
-                             GPIO_ODR_ODR13_Msk |
-                             GPIO_ODR_ODR14_Msk |
-                             GPIO_ODR_ODR15_Msk;
+                GPIOB->BSRR = (1<<GPIO_BSRR_BS0_Pos); // EZ=1 (передача выключена)
 
                 dataBusActive=false;
 
@@ -119,61 +83,15 @@ void mainLoop()
                 if(dataBusActive==false)
                 {
                     // ШД должна стать активной
-                    const uint32_t mode=0b11; // Режим выхода с максимальной частотой 50 МГц
-                    const uint32_t cnf=0b00;  // Двухтактный выход (Output push-pull)
-
-                    // Текущие режимы всех ножек порта B
-                    uint32_t statusB=GPIOB->CRH;
-
-                    // Обнуление битов режима для ножек ШД
-                    statusB &= ~(GPIO_CRH_MODE8_Msk  | GPIO_CRH_CNF8_Msk |
-                                 GPIO_CRH_MODE9_Msk  | GPIO_CRH_CNF9_Msk |
-                                 GPIO_CRH_MODE10_Msk | GPIO_CRH_CNF10_Msk |
-                                 GPIO_CRH_MODE11_Msk | GPIO_CRH_CNF11_Msk |
-                                 GPIO_CRH_MODE12_Msk | GPIO_CRH_CNF12_Msk |
-                                 GPIO_CRH_MODE13_Msk | GPIO_CRH_CNF13_Msk |
-                                 GPIO_CRH_MODE14_Msk | GPIO_CRH_CNF14_Msk |
-                                 GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk );
-
-                    // Установка битов режима
-                    GPIOB->CRH = statusB | 
-                                 (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos)  |
-                                 (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos)  |
-                                 (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos) |
-                                 (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos) |
-                                 (mode << GPIO_CRH_MODE12_Pos) | (cnf << GPIO_CRH_CNF12_Pos) |
-                                 (mode << GPIO_CRH_MODE13_Pos) | (cnf << GPIO_CRH_CNF13_Pos) |
-                                 (mode << GPIO_CRH_MODE14_Pos) | (cnf << GPIO_CRH_CNF14_Pos) |
-                                 (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
-
-                    // Настройка одного пина 15, использовалось при отладке
-                    // uint32_t statusB=GPIOB->CRH;
-                    // statusB &= ~(GPIO_CRH_MODE15_Msk | GPIO_CRH_CNF15_Msk); // Обнуление битов режима
-                    // GPIOB->CRH = statusB | (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos); // Установка режима
+                    GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включена)
                     
                     dataBusActive=true;
 
                     // GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
                 }
 
-                /*
-                static bool blinkFlag=false;
-                blinkFlag=!blinkFlag;
-                if(blinkFlag)
-                {
-                    GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
-                    GPIOB->BSRR = (1<<GPIO_BSRR_BS15_Pos); // Пин ШД7 включается
-                }                    
-                else
-                {
-                    GPIOA->BSRR = (1<<GPIO_BSRR_BR0_Pos); // Светодиод выключается
-                    GPIOB->BSRR = (1<<GPIO_BSRR_BR15_Pos); // Пин ШД7 вылючается
-                }
-                */
-
-
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0x0F; // mem[addr-START_MEM_ADDR];
+                uint8_t byte=0x2F; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
@@ -192,16 +110,6 @@ void mainLoop()
             }    
         }
 
-
-        // Медленное переключение
-        // 1мкс+1мкс = 2мкс - один период - на обычной частоте (неизвестно какой, которая стандартная)
-        // GPIOB->ODR ^= (1<<LED1);
-
-        // Более быстрое переключение
-        // 250нс+250нс = 500нс - один период - на обычной частоте (неизвестно какой, которая стандартная)
-        // 30нс+30нс = 60нс - один период - на частоте 72МГц
-        // GPIOB->BSRR = (1<<LED1); // Hi
-        // GPIOB->BRR = (1<<LED1); // Low
     }
 }
 
