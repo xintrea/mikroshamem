@@ -14,10 +14,10 @@ void blink();
 void setDebugLed(int n, bool on);
 
 // Содержимое памяти
-#define START_MEM_ADDR 0x8000
+#define START_MEM_ADDR 0x8000 // Начальный адрес эмуляции ПЗУ в ПЭВМ Микроша
 #define MEM_LEN 5
-uint8_t mem[MEM_LEN]={0x55, 0x00, 0xFF, 0x01, 0x20};
 
+uint8_t mem[MEM_LEN]={0x55, 0x00, 0xFF, 0x01, 0x20};
 
 int main(void)
 {
@@ -65,7 +65,7 @@ void mainLoop()
     // Если true - шина данных активна, на пинах выставлены какие-то данные
     bool dataBusActive=false;
 
-    int status=0;
+    // int status=0;
 
     while (true) 
     {
@@ -91,45 +91,53 @@ void mainLoop()
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
             // Нужно получить текущий адрес с ША
-            // uint16_t addr=readAddressBus();
+            uint16_t addr=readAddressBus();
+            // uint16_t addr=0x8002;
+
+            uint8_t byte;
 
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
-            // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
-            // if( true )
+            if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
             {
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0x77; // mem[addr-START_MEM_ADDR];
+                // uint8_t byte=0x88;
+                byte=mem[addr-START_MEM_ADDR];
+            }
+            else
+            {
+                byte=0x88;
+            }
 
-                // Текущие состояния всех пинов порта B
-                uint16_t allPins=GPIOB->IDR;
+            // Текущие состояния всех пинов порта B
+            uint16_t allPins=GPIOB->IDR;
 
-                // Остаются состояния не-data пинов, а data-пины обнуляются
-                allPins = allPins & 0x0000FFFF;
+            // Остаются состояния не-data пинов, а data-пины обнуляются
+            allPins = allPins & 0x0000FFFF;
 
-                // Значение байта данных смещается в область data-пинов (в биты 8-15)
-                uint16_t dataPins=((uint16_t)byte) << 8;
+            // Значение байта данных смещается в область data-пинов (в биты 8-15)
+            uint16_t dataPins=((uint16_t)byte) << 8;
 
-                // Биты данных подмешиваются в значения всех пинов
-                allPins = allPins | dataPins;
+            // Биты данных подмешиваются в значения всех пинов
+            allPins = allPins | dataPins;
 
-                // Биты данных выставляются на порту
-                GPIOB->ODR=allPins;
+            // Биты данных выставляются на порту
+            GPIOB->ODR=allPins;
 
-                // Проталкивание байта сквозь шинный преобразователь
-                // Если ШД неактивна
-                if(dataBusActive==false)
-                {
-                    // ШД должна стать активной
-                    GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включается)
-                    
-                    dataBusActive=true;
+            // Проталкивание байта сквозь шинный преобразователь
+            // Если ШД неактивна
+            if(dataBusActive==false)
+            {
+                // ШД должна стать активной
+                GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включается)
+                
+                dataBusActive=true;
 
-                    status++;
+                // status++;
 
-                    // setDebugLed(0, 1);
-                }                
-            }    
+                // setDebugLed(0, 1);
+            }                
+                
         }
 
     }
@@ -239,7 +247,7 @@ uint16_t readAddressBus()
 }
 
 
-// Чтение адреса с адресной шины Микроши
+// Выставление отладочных светодиодов
 __attribute__((noinline, section(".ramfunc")))
 void setDebugLed(int n, bool on)
 {
@@ -248,7 +256,7 @@ void setDebugLed(int n, bool on)
     // 1 - A0
     // 2 - A2 (пока не сделан)
     
-    // C13
+    // C13, подключен на (+), поэтому 0 -светится, 1 - выключен
     if(n==0)
     {
         if(on)
