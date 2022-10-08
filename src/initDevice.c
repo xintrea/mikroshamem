@@ -106,9 +106,10 @@ int clockInit(void)
 // Включение тактирования портов
 void portClockInit(void)
 {
-    // Тактирование портов GPIOA и GPIOB
+    // Тактирование портов GPIOA, GPIOB, GPIOC
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
     RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+    RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 }
 
 
@@ -206,7 +207,7 @@ void dataBusInit(void)
 }
 
 
-// Перевод шины в режим подтяжки к общеу проводу
+// Перевод шины в режим подтяжки к общему проводу
 // Функция оставлена как образец кода, не используется
 void dataBusPullDown(void)
 {
@@ -274,11 +275,19 @@ void systemPinsInit(void)
 // Отладочный светодиод на A0
 void debugLedInit(void)
 {
-    // Для начала сброс конфигурации пина в ноль
-    GPIOA->CRL &= ~(GPIO_CRL_MODE0 | GPIO_CRL_CNF0);
-
     const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
     const uint32_t cnf=0b00;  // 00 - Двухтактный выход (Output push-pull)
+
+    // A0
+    // Для начала сброс конфигурации пина в ноль
+    GPIOA->CRL &= ~(GPIO_CRL_MODE0 | GPIO_CRL_CNF0);
     GPIOA->CRL |= (mode << GPIO_CRL_MODE0_Pos)  | (cnf << GPIO_CRL_CNF0_Pos);
+    GPIOA->BSRR = (1<<GPIO_BSRR_BR0_Pos); // Светодиод A0 выключается (reset)
+
+    // C13, он подключен на (+)
+    // Для начала сброс конфигурации порта в ноль
+    GPIOC->CRH &= ~(GPIO_CRH_MODE13 | GPIO_CRH_CNF13);
+    GPIOC->CRH |= (0b11 << GPIO_CRH_MODE13_Pos) | (0x00 << GPIO_CRH_CNF13_Pos);
+    GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos); // Светодиод C13 выключается (set)
 }
-   
+

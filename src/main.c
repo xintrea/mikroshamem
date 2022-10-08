@@ -10,6 +10,8 @@ uint16_t readAddressBus(); // Чтение адреса с ША Микроши
 void delayMs(int ms);
 void delayCycles(uint32_t cycles);
 void mainLoop();
+void blink();
+void setDebugLed(int n, bool on);
 
 // Содержимое памяти
 #define START_MEM_ADDR 0x8000
@@ -32,10 +34,28 @@ int main(void)
     delayMs(500);
 
     mainLoop();
+    // blink();
+
+    // setDebugLed(0, 1);
+    // setDebugLed(1, 0);
 
     return 0;
 }
 
+__attribute__((noinline, section(".ramfunc")))
+void blink()
+{
+    while (true) 
+    {
+        delayMs(500);
+        GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos);  // Hi A0
+        GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos); // Hi C13
+
+        delayMs(500);
+        GPIOA->BRR = (1<<GPIO_BSRR_BS0_Pos);  // Low A0
+        GPIOC->BRR = (1<<GPIO_BSRR_BS13_Pos); // Low C13
+    } 
+}
 
 __attribute__((noinline, section(".ramfunc")))
 void mainLoop()
@@ -45,6 +65,8 @@ void mainLoop()
     // Если true - шина данных активна, на пинах выставлены какие-то данные
     bool dataBusActive=false;
 
+    int status=0;
+
     while (true) 
     {
         // Проверка системных сигналов /32К и /RD
@@ -52,9 +74,8 @@ void mainLoop()
         // чтобы не влиять на ШД и никаких действий происходить не должно
         uint32_t workAddrDiapason = GPIOA->IDR & (GPIO_IDR_IDR10_Msk | GPIO_IDR_IDR11_Msk);
         
-        // Сигналы инверсны, значит и оба активных бита должны быть равны нулю, 
-        // а остальные из-за маски нулевые
-        if(workAddrDiapason!=0) // Если сигналы /32К и /RD физически не установлены в 0
+        // Если оба сигнала /32К и /RD физически не установлены в 0
+        if(workAddrDiapason!=0) 
         {
             // Надо проследить чтобы шинный формирователь был закрыт
             // чтобы никак не влиять на ШД компьютера и больше ничего не делать
@@ -63,8 +84,6 @@ void mainLoop()
                 GPIOB->BSRR = (1<<GPIO_BSRR_BS0_Pos); // EZ=1 (передача выключена)
 
                 dataBusActive=false;
-
-                // GPIOA->BRR = (1<<GPIO_BRR_BR0_Pos); // Светодиод выключается
             }
 
             continue;
@@ -79,19 +98,8 @@ void mainLoop()
             // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
             // if( true )
             {
-                // Если ШД неактивна
-                if(dataBusActive==false)
-                {
-                    // ШД должна стать активной
-                    GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включена)
-                    
-                    dataBusActive=true;
-
-                    // GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); // Светодиод включается
-                }
-
                 // Байт, который будет выдан на ШД
-                uint8_t byte=0x2F; // mem[addr-START_MEM_ADDR];
+                uint8_t byte=0x77; // mem[addr-START_MEM_ADDR];
 
                 // Текущие состояния всех пинов порта B
                 uint16_t allPins=GPIOB->IDR;
@@ -107,6 +115,20 @@ void mainLoop()
 
                 // Биты данных выставляются на порту
                 GPIOB->ODR=allPins;
+
+                // Проталкивание байта сквозь шинный преобразователь
+                // Если ШД неактивна
+                if(dataBusActive==false)
+                {
+                    // ШД должна стать активной
+                    GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включается)
+                    
+                    dataBusActive=true;
+
+                    status++;
+
+                    // setDebugLed(0, 1);
+                }                
             }    
         }
 
@@ -214,4 +236,44 @@ uint16_t readAddressBus()
                  ( ((currentPins & GPIO_IDR_IDR7_Msk) >> GPIO_IDR_IDR7_Pos) << 3) );
 
     return addrOctet0 + (addrOctet1 << 4) + (addrOctet2 << 8) + (addrOctet3 << 12);
+}
+
+
+// Чтение адреса с адресной шины Микроши
+__attribute__((noinline, section(".ramfunc")))
+void setDebugLed(int n, bool on)
+{
+    // Всего 3 светодиода
+    // 0 - C13
+    // 1 - A0
+    // 2 - A2 (пока не сделан)
+    
+    // C13
+    if(n==0)
+    {
+        if(on)
+        {
+            GPIOC->BSRR = (1<<GPIO_BSRR_BR13_Pos);
+        }
+        else
+        {
+            GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos);
+        }
+
+    }
+
+    // A0, подключен по-обычному
+    if(n==1)
+    {
+        if(on)
+        {
+            GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos); 
+        }
+        else
+        {
+            GPIOA->BSRR = (1<<GPIO_BSRR_BR0_Pos); 
+        }
+    }
+
+    return;
 }
