@@ -48,12 +48,12 @@ void blink()
     while (true) 
     {
         delayMs(500);
-        GPIOA->BSRR = (1<<GPIO_BSRR_BS0_Pos);  // Hi A0
-        GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos); // Hi C13
+        setDebugLed(0,0); // C13
+        setDebugLed(1,1); // A0
 
         delayMs(500);
-        GPIOA->BRR = (1<<GPIO_BSRR_BS0_Pos);  // Low A0
-        GPIOC->BRR = (1<<GPIO_BSRR_BS13_Pos); // Low C13
+        setDebugLed(0,1); // C13
+        setDebugLed(1,0); // A0
     } 
 }
 
@@ -72,7 +72,7 @@ void mainLoop()
         // Проверка системных сигналов /32К и /RD
         // Если они неактивны, сигнал EZ на шинном формирователе должны быть 1
         // чтобы не влиять на ШД и никаких действий происходить не должно
-        uint32_t workAddrDiapason = GPIOA->IDR & (GPIO_IDR_IDR10_Msk | GPIO_IDR_IDR11_Msk);
+        uint32_t workAddrDiapason = GPIOB->IDR & (GPIO_IDR_IDR6_Msk | GPIO_IDR_IDR7_Msk);
         
         // Если оба сигнала /32К и /RD физически не установлены в 0
         if(workAddrDiapason!=0) 
@@ -91,23 +91,23 @@ void mainLoop()
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
             // Нужно получить текущий адрес с ША
-            uint16_t addr=readAddressBus();
+            // uint16_t addr=readAddressBus();
             // uint16_t addr=0x8002;
 
-            uint8_t byte;
+            uint8_t byte=0x88;
 
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
-            if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
-            {
-                // Байт, который будет выдан на ШД
-                // uint8_t byte=0x88;
-                byte=mem[addr-START_MEM_ADDR];
-            }
-            else
-            {
-                byte=0x88;
-            }
+            // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
+            // {
+            //     // Байт, который будет выдан на ШД
+            //     // uint8_t byte=0x88;
+            //     byte=mem[addr-START_MEM_ADDR];
+            // }
+            // else
+            // {
+            //     byte=0x88;
+            // }
 
             // Текущие состояния всех пинов порта B
             uint16_t allPins=GPIOB->IDR;
@@ -197,51 +197,51 @@ uint16_t readAddressBus()
     uint32_t currentPins;
 
     // Установка на мультиплексоре сегмента адреса 00
-    GPIOA->BSRR = 0 | (GPIO_BSRR_BR8_Msk | GPIO_BSRR_BR9_Msk );
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk );
 
     // Считывается и запоминается значение ножек сегмента 0
-    currentPins = GPIOB->IDR;
+    currentPins = GPIOA->IDR;
     addrOctet0 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR3_Msk) >> GPIO_IDR_IDR3_Pos      ) + 
-                 ( ((currentPins & GPIO_IDR_IDR4_Msk) >> GPIO_IDR_IDR4_Pos) << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR6_Msk) >> GPIO_IDR_IDR6_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR7_Msk) >> GPIO_IDR_IDR7_Pos) << 3) );
+                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
+                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
+                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
+                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
 
 
     // Установка на мультиплексоре сегмента адреса 01
-    GPIOA->BSRR = 0 | (GPIO_BSRR_BS8_Msk | GPIO_BSRR_BR9_Msk );
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BR4_Msk );
 
     // Считывается и запоминается значение ножек сегмента 1
-    currentPins = GPIOB->IDR;
+    currentPins = GPIOA->IDR;
     addrOctet1 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR3_Msk) >> GPIO_IDR_IDR3_Pos      ) + 
-                 ( ((currentPins & GPIO_IDR_IDR4_Msk) >> GPIO_IDR_IDR4_Pos) << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR6_Msk) >> GPIO_IDR_IDR6_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR7_Msk) >> GPIO_IDR_IDR7_Pos) << 3) );
+                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
+                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
+                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
+                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
 
 
     // Установка на мультиплексоре сегмента адреса 10
-    GPIOA->BSRR = 0 | (GPIO_BSRR_BR8_Msk | GPIO_BSRR_BS9_Msk );
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk );
 
     // Считывается и запоминается значение ножек сегмента 2
-    currentPins = GPIOB->IDR;
+    currentPins = GPIOA->IDR;
     addrOctet2 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR3_Msk) >> GPIO_IDR_IDR3_Pos      ) + 
-                 ( ((currentPins & GPIO_IDR_IDR4_Msk) >> GPIO_IDR_IDR4_Pos) << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR6_Msk) >> GPIO_IDR_IDR6_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR7_Msk) >> GPIO_IDR_IDR7_Pos) << 3) );
+                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
+                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
+                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
+                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
 
 
     // Установка на мультиплексоре сегмента адреса 11
-    GPIOA->BSRR = 0 | (GPIO_BSRR_BS8_Msk | GPIO_BSRR_BS9_Msk );
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk );
 
     // Считывается и запоминается значение ножек сегмента 3
-    currentPins = GPIOB->IDR;
+    currentPins = GPIOA->IDR;
     addrOctet3 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR3_Msk) >> GPIO_IDR_IDR3_Pos      ) + 
-                 ( ((currentPins & GPIO_IDR_IDR4_Msk) >> GPIO_IDR_IDR4_Pos) << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR6_Msk) >> GPIO_IDR_IDR6_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR7_Msk) >> GPIO_IDR_IDR7_Pos) << 3) );
+                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
+                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
+                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
+                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
 
     return addrOctet0 + (addrOctet1 << 4) + (addrOctet2 << 8) + (addrOctet3 << 12);
 }

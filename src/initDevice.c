@@ -127,18 +127,18 @@ void addressBusInit(void)
 {
     // Захват с 16-битной шины адреса происходит через 6 пинов
     // через мультиплексор на двух микросхемах К533КП2
-    // Выбор сегмента адреса: A0 - PA8, A1 - PA9
-    // Адресная линия: A0 - PB3, A1 - PB4, A2 - PB6, A3 - PB7
+    // Выбор сегмента адреса: A0 - PB3, A1 - PB4
+    // Адресная линия: A0 - PA8, A1 - PA9, A2 - PA10, A3 - PA11
 
 
     // Для начала сброс конфигурации всех портов в ноль
-    GPIOA->CRH &= ~(GPIO_CRH_MODE8 | GPIO_CRH_CNF8);
-    GPIOA->CRH &= ~(GPIO_CRH_MODE9 | GPIO_CRH_CNF9);
+    GPIOB->CRH &= ~(GPIO_CRL_MODE3 | GPIO_CRL_CNF3);
+    GPIOB->CRH &= ~(GPIO_CRL_MODE4 | GPIO_CRL_CNF4);
 
-    GPIOB->CRL &= ~(GPIO_CRL_MODE3 | GPIO_CRL_CNF3);
-    GPIOB->CRL &= ~(GPIO_CRL_MODE4 | GPIO_CRL_CNF4);
-    GPIOB->CRL &= ~(GPIO_CRL_MODE6 | GPIO_CRL_CNF6);
-    GPIOB->CRL &= ~(GPIO_CRL_MODE7 | GPIO_CRL_CNF7);
+    GPIOA->CRL &= ~(GPIO_CRH_MODE8  | GPIO_CRH_CNF8);
+    GPIOA->CRL &= ~(GPIO_CRH_MODE9  | GPIO_CRH_CNF9);
+    GPIOA->CRL &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);
+    GPIOA->CRL &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);
 
 
     uint32_t mode;
@@ -147,17 +147,17 @@ void addressBusInit(void)
     // Выбор банка адреса всегда работает как выход
     mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
     cnf=0b00;  // Режим push-pull
-    GPIOA->CRH |= (mode << GPIO_CRH_MODE8_Pos) | (cnf << GPIO_CRH_CNF8_Pos);
-    GPIOA->CRH |= (mode << GPIO_CRH_MODE9_Pos) | (cnf << GPIO_CRH_CNF9_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRL_MODE3_Pos) | (cnf << GPIO_CRL_CNF3_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRL_MODE4_Pos) | (cnf << GPIO_CRL_CNF4_Pos);
 
 
     // Адресные линии всегда работают как вход
     mode=0b00; // Режим входа
     cnf=0b01;  // Режим плавающего входа, подтяжки нет
-    GPIOB->CRL |= (mode << GPIO_CRL_MODE3_Pos) | (cnf << GPIO_CRL_CNF3_Pos);
-    GPIOB->CRL |= (mode << GPIO_CRL_MODE4_Pos) | (cnf << GPIO_CRL_CNF4_Pos);
-    GPIOB->CRL |= (mode << GPIO_CRL_MODE6_Pos) | (cnf << GPIO_CRL_CNF6_Pos);
-    GPIOB->CRL |= (mode << GPIO_CRL_MODE7_Pos) | (cnf << GPIO_CRL_CNF7_Pos);
+    GPIOA->CRL |= (mode << GPIO_CRH_MODE8_Pos)  | (cnf << GPIO_CRH_CNF8_Pos);
+    GPIOA->CRL |= (mode << GPIO_CRH_MODE9_Pos)  | (cnf << GPIO_CRH_CNF9_Pos);
+    GPIOA->CRL |= (mode << GPIO_CRH_MODE10_Pos) | (cnf << GPIO_CRH_CNF10_Pos);
+    GPIOA->CRL |= (mode << GPIO_CRH_MODE11_Pos) | (cnf << GPIO_CRH_CNF11_Pos);
 }
 
 
@@ -253,22 +253,22 @@ void dataBusPullDown(void)
 void systemPinsInit(void)
 {
     // Пины захвата системных сигналов Микроши
-    // /32К - PA10
-    // /RD  - PA11
+    // /32К - PB6
+    // /RD  - PB7
 
     // Для начала сброс конфигурации обеих пинов в ноль
-    GPIOA->CRH &= ~(GPIO_CRH_MODE10 | GPIO_CRH_CNF10);
-    GPIOA->CRH &= ~(GPIO_CRH_MODE11 | GPIO_CRH_CNF11);
+    GPIOB->CRH &= ~(GPIO_CRL_MODE6 | GPIO_CRL_CNF6);
+    GPIOB->CRH &= ~(GPIO_CRL_MODE7 | GPIO_CRL_CNF7);
 
     // Пины работают на чтение как обычные входы
     const uint32_t mode=0b00; // Режим входа
     const uint32_t cnf=0b10;  // 10 - вход с подтягиванием, 01 - Плавающий вход, подтяжки нет
-    GPIOA->CRH |= (mode << GPIO_CRH_MODE10_Pos)  | (cnf << GPIO_CRH_CNF10_Pos);
-    GPIOA->CRH |= (mode << GPIO_CRH_MODE11_Pos)  | (cnf << GPIO_CRH_CNF11_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRL_MODE6_Pos)  | (cnf << GPIO_CRL_CNF6_Pos);
+    GPIOB->CRH |= (mode << GPIO_CRL_MODE7_Pos)  | (cnf << GPIO_CRL_CNF7_Pos);
 
     // Установка подтяжки к общему проводу (Pull-Down)
-    GPIOA->BSRR = (1<<GPIO_BSRR_BR10_Pos);
-    GPIOA->BSRR = (1<<GPIO_BSRR_BR11_Pos);
+    GPIOB->BSRR = (1<<GPIO_BSRR_BR6_Pos);
+    GPIOB->BSRR = (1<<GPIO_BSRR_BR7_Pos);
 }
 
 
