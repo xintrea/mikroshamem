@@ -85,22 +85,6 @@ int main(void)
 
 
 __attribute__((noinline, section(".ramfunc")))
-void blink()
-{
-    while (true) 
-    {
-        delayMs(500);
-        setDebugLed(0,0); // C13
-        setDebugLed(1,1); // A0
-
-        delayMs(500);
-        setDebugLed(0,1); // C13
-        setDebugLed(1,0); // A0
-    } 
-}
-
-
-__attribute__((noinline, section(".ramfunc")))
 void mainLoop()
 {
     // Флаг слежения за активностью шины данных
@@ -110,15 +94,24 @@ void mainLoop()
 
     // int status=0;
 
+    uint16_t addr=0;
+
     while (true) 
     {
         // Проверка системных сигналов /32К и /RD
         // Если они неактивны, сигнал EZ на шинном формирователе должны быть 1
         // чтобы не влиять на ШД и никаких действий происходить не должно
-        uint32_t workAddrDiapason = GPIOB->IDR & (GPIO_IDR_IDR6_Msk | GPIO_IDR_IDR7_Msk);
+        // uint32_t workAddrDiapason = GPIOB->IDR & (GPIO_IDR_IDR6_Msk | GPIO_IDR_IDR7_Msk);
+
+        // Если пришел сигнал /32К значит надо высчитывать адрес
+        if( (GPIOB->IDR & (GPIO_IDR_IDR6_Msk )) == 0 )
+        {
+            addr=readAddressBus();
+        }
+
         
         // Если оба сигнала /32К и /RD физически не установлены в 0
-        if(workAddrDiapason!=0) 
+        if( (GPIOB->IDR & (GPIO_IDR_IDR6_Msk | GPIO_IDR_IDR7_Msk)) != 0) 
         {
             // Надо проследить чтобы шинный формирователь был закрыт
             // чтобы никак не влиять на ШД компьютера и больше ничего не делать
@@ -134,7 +127,7 @@ void mainLoop()
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
             // Нужно получить текущий адрес с ША
-            uint16_t addr=readAddressBus();
+            // uint16_t addr=readAddressBus();
             // uint16_t addr=0x8002;
 
             uint8_t byte; // =0x88;
@@ -152,11 +145,9 @@ void mainLoop()
                 byte=0x88;
             }
 
-            // Текущие состояния всех пинов порта B
-            uint16_t allPins=GPIOB->IDR;
-
-            // Остаются состояния не-data пинов, а data-пины обнуляются
-            allPins = allPins & 0x0000FFFF;
+            // Текущие состояния всех пинов порта B,
+            // причем остаются состояния не-data пинов, а data-пины обнуляются
+            uint16_t allPins=GPIOB->IDR & 0x0000FFFF;
 
             // Значение байта данных смещается в область data-пинов (в биты 8-15)
             uint16_t dataPins=((uint16_t)byte) << 8;
@@ -225,6 +216,22 @@ void delayCycles(uint32_t cycles)
     "   bne 1b \n"
     : [cycles] "+l"(cycles)
   );
+}
+
+
+__attribute__((noinline, section(".ramfunc")))
+void blink()
+{
+    while (true) 
+    {
+        delayMs(500);
+        setDebugLed(0,0); // C13
+        setDebugLed(1,1); // A0
+
+        delayMs(500);
+        setDebugLed(0,1); // C13
+        setDebugLed(1,0); // A0
+    } 
 }
 
 
