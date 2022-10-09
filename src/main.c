@@ -27,31 +27,31 @@ uint16_t readAddressBus()
 {
     // Для ускорения адрес вначале считается 32-х битным чтобы проще работать
     // с 32-х битным регистром PA, и только в конце он один раз преобразуется в 16 бит
-    uint32_t addr = 0;
+    uint32_t addr;
 
     // Установка на мультиплексоре сегмента адреса 00
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk );
+    GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 0
     addr = ((GPIOA->IDR & 0x0F00) >> 8);
 
 
     // Установка на мультиплексоре сегмента адреса 01
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BR4_Msk );
+    GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BR4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 1
     addr = addr | ((GPIOA->IDR & 0x0F00) >> 4);
 
 
     // Установка на мультиплексоре сегмента адреса 10
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk );
+    GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 2
     addr = addr | (GPIOA->IDR & 0x0F00);
 
 
     // Установка на мультиплексоре сегмента адреса 11
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk );
+    GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 3
     addr = addr | ((GPIOA->IDR & 0x0F00) << 4);
@@ -92,8 +92,6 @@ void mainLoop()
     // Если true - шина данных активна, на пинах выставлены какие-то данные
     bool dataBusActive=false;
 
-    // int status=0;
-
     uint16_t addr=0;
 
     while (true) 
@@ -126,23 +124,14 @@ void mainLoop()
         }
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
-            // Нужно получить текущий адрес с ША
-            // uint16_t addr=readAddressBus();
-            // uint16_t addr=0x8002;
-
-            uint8_t byte; // =0x88;
+            uint8_t byte=0x00; // Значение байта по-умолчанию
 
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
             if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
             {
                 // Байт, который будет выдан на ШД
-                // uint8_t byte=0x88;
                 byte=mem[addr-START_MEM_ADDR];
-            }
-            else
-            {
-                byte=0x88;
             }
 
             // Текущие состояния всех пинов порта B,
@@ -166,10 +155,6 @@ void mainLoop()
                 GPIOB->BSRR = (1<<GPIO_BSRR_BR0_Pos); // EZ=0 (передача включается)
                 
                 dataBusActive=true;
-
-                // status++;
-
-                // setDebugLed(0, 1);
             }                
                 
         }
