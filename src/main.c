@@ -6,7 +6,6 @@
 
 
 // Прототипы используемых функций
-uint16_t readAddressBus(); // Чтение адреса с ША Микроши
 void delayMs(int ms);
 void delayCycles(uint32_t cycles);
 void mainLoop();
@@ -18,6 +17,48 @@ void setDebugLed(int n, bool on);
 #define MEM_LEN 5
 
 uint8_t mem[MEM_LEN]={0x55, 0x00, 0xFF, 0x01, 0x20};
+
+
+// Чтение адреса с адресной шины Микроши
+// Описывается первой чтобы небыло необходимости прописывать прототип,
+// т. к. функция должна обязательно инлайниться
+__attribute__((always_inline, section(".ramfunc")))
+uint16_t readAddressBus()
+{
+    // Для ускорения адрес вначале считается 32-х битным чтобы проще работать
+    // с 32-х битным регистром PA, и только в конце он один раз преобразуется в 16 бит
+    uint32_t addr = 0;
+
+    // Установка на мультиплексоре сегмента адреса 00
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk );
+
+    // Считывается и запоминается значение ножек сегмента 0
+    addr = ((GPIOA->IDR & 0x0F00) >> 8);
+
+
+    // Установка на мультиплексоре сегмента адреса 01
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BR4_Msk );
+
+    // Считывается и запоминается значение ножек сегмента 1
+    addr = addr | ((GPIOA->IDR & 0x0F00) >> 4);
+
+
+    // Установка на мультиплексоре сегмента адреса 10
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk );
+
+    // Считывается и запоминается значение ножек сегмента 2
+    addr = addr | (GPIOA->IDR & 0x0F00);
+
+
+    // Установка на мультиплексоре сегмента адреса 11
+    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk );
+
+    // Считывается и запоминается значение ножек сегмента 3
+    addr = addr | ((GPIOA->IDR & 0x0F00) << 4);
+
+    return (uint16_t) addr;
+}
+
 
 int main(void)
 {
@@ -42,6 +83,7 @@ int main(void)
     return 0;
 }
 
+
 __attribute__((noinline, section(".ramfunc")))
 void blink()
 {
@@ -56,6 +98,7 @@ void blink()
         setDebugLed(1,0); // A0
     } 
 }
+
 
 __attribute__((noinline, section(".ramfunc")))
 void mainLoop()
@@ -91,23 +134,23 @@ void mainLoop()
         else // Иначе /32К и /RD активны (оба в физ. нуле)
         {
             // Нужно получить текущий адрес с ША
-            // uint16_t addr=readAddressBus();
+            uint16_t addr=readAddressBus();
             // uint16_t addr=0x8002;
 
-            uint8_t byte=0x88;
+            uint8_t byte; // =0x88;
 
             // Если адрес в диапазоне эмуляции ПЗУ,
             // на шине данных выставляется нужный байт
-            // if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
-            // {
-            //     // Байт, который будет выдан на ШД
-            //     // uint8_t byte=0x88;
-            //     byte=mem[addr-START_MEM_ADDR];
-            // }
-            // else
-            // {
-            //     byte=0x88;
-            // }
+            if( addr>=START_MEM_ADDR && addr<(START_MEM_ADDR+MEM_LEN) )
+            {
+                // Байт, который будет выдан на ШД
+                // uint8_t byte=0x88;
+                byte=mem[addr-START_MEM_ADDR];
+            }
+            else
+            {
+                byte=0x88;
+            }
 
             // Текущие состояния всех пинов порта B
             uint16_t allPins=GPIOB->IDR;
@@ -182,68 +225,6 @@ void delayCycles(uint32_t cycles)
     "   bne 1b \n"
     : [cycles] "+l"(cycles)
   );
-}
-
-
-// Чтение адреса с адресной шины Микроши
-__attribute__((noinline, section(".ramfunc")))
-uint16_t readAddressBus()
-{
-    uint16_t addrOctet0 = 0;
-    uint16_t addrOctet1 = 0;
-    uint16_t addrOctet2 = 0;
-    uint16_t addrOctet3 = 0;
-
-    uint32_t currentPins;
-
-    // Установка на мультиплексоре сегмента адреса 00
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk );
-
-    // Считывается и запоминается значение ножек сегмента 0
-    currentPins = GPIOA->IDR;
-    addrOctet0 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
-                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
-
-
-    // Установка на мультиплексоре сегмента адреса 01
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BR4_Msk );
-
-    // Считывается и запоминается значение ножек сегмента 1
-    currentPins = GPIOA->IDR;
-    addrOctet1 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
-                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
-
-
-    // Установка на мультиплексоре сегмента адреса 10
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk );
-
-    // Считывается и запоминается значение ножек сегмента 2
-    currentPins = GPIOA->IDR;
-    addrOctet2 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
-                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
-
-
-    // Установка на мультиплексоре сегмента адреса 11
-    GPIOB->BSRR = 0 | (GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk );
-
-    // Считывается и запоминается значение ножек сегмента 3
-    currentPins = GPIOA->IDR;
-    addrOctet3 = (uint16_t) (
-                 (  (currentPins & GPIO_IDR_IDR8_Msk)  >> GPIO_IDR_IDR8_Pos       ) + 
-                 ( ((currentPins & GPIO_IDR_IDR9_Msk)  >> GPIO_IDR_IDR9_Pos)  << 1) +
-                 ( ((currentPins & GPIO_IDR_IDR10_Msk) >> GPIO_IDR_IDR10_Pos) << 2) +
-                 ( ((currentPins & GPIO_IDR_IDR11_Msk) >> GPIO_IDR_IDR11_Pos) << 3) );
-
-    return addrOctet0 + (addrOctet1 << 4) + (addrOctet2 << 8) + (addrOctet3 << 12);
 }
 
 
