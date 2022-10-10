@@ -42,21 +42,24 @@ uint16_t readAddressBus()
     // Считывается и запоминается значение ножек сегмента 1
     addr = addr | ((GPIOA->IDR & 0x0F00) >> 4);
 
+    // Временно считывается 8 бит адреса
 
     // Установка на мультиплексоре сегмента адреса 10
-    GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk;
+    // GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BS4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 2
-    addr = addr | (GPIOA->IDR & 0x0F00);
+    // addr = addr | (GPIOA->IDR & 0x0F00);
 
 
     // Установка на мультиплексоре сегмента адреса 11
-    GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk;
+    // GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk;
 
     // Считывается и запоминается значение ножек сегмента 3
-    addr = addr | ((GPIOA->IDR & 0x0F00) << 4);
+    // addr = addr | ((GPIOA->IDR & 0x0F00) << 4);
 
-    return (uint16_t) addr;
+    // Так как временно читается только 8 бит адреса,
+    // к адресу добавляется базовый адрес
+    return ((uint16_t) addr)+START_MEM_ADDR;
 }
 
 
@@ -105,7 +108,7 @@ void mainLoop()
         if( (GPIOB->IDR & (GPIO_IDR_IDR6_Msk )) == 0 )
         {
             addr=readAddressBus();
-        }
+        }   
 
         
         // Если оба сигнала /32К и /RD физически не установлены в 0
@@ -134,18 +137,8 @@ void mainLoop()
                 byte=mem[addr-START_MEM_ADDR];
             }
 
-            // Текущие состояния всех пинов порта B,
-            // причем остаются состояния не-data пинов, а data-пины обнуляются
-            uint16_t allPins=GPIOB->IDR & 0x0000FFFF;
-
-            // Значение байта данных смещается в область data-пинов (в биты 8-15)
-            uint16_t dataPins=((uint16_t)byte) << 8;
-
-            // Биты данных подмешиваются в значения всех пинов
-            allPins = allPins | dataPins;
-
-            // Биты данных выставляются на порту
-            GPIOB->ODR=allPins;
+            // Установка байта на ШД (в биты 8-15 порта B)
+            GPIOB->BSRR = 0xFF000000 | (((uint16_t) byte) << 8);
 
             // Проталкивание байта сквозь шинный преобразователь
             // Если ШД неактивна
@@ -221,7 +214,7 @@ void blink()
 
 
 // Выставление отладочных светодиодов
-__attribute__((noinline, section(".ramfunc")))
+__attribute__((always_inline, section(".ramfunc")))
 void setDebugLed(int n, bool on)
 {
     // Всего 3 светодиода
