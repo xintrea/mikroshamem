@@ -113,6 +113,16 @@ void portClockInit(void)
 }
 
 
+// Чтобы работали ножки PB3, PB4, PA15 как обычные порты ввода-вывода,
+// необходимо отключать JTAGa
+void disableJtag(void)
+{
+    // Конфигурирование AFIO, чтобы работали ножки PB3, PB4, PA15
+    RCC->APB2ENR |= RCC_APB2ENR_AFIOEN; // Разрешение тактирования AFIO для PA15
+    AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE; // Отключение JTAG
+}
+
+
 // Остановка глобальных прерываний
 void disableGlobalInterrupt(void)
 {
@@ -272,7 +282,7 @@ void systemPinsInit(void)
 }
 
 
-// Отладочный светодиод на A0
+// Отладочные светодиоды
 void debugLedInit(void)
 {
     const uint32_t mode=0b11; // Режим выхода, с максимальной частотой 50 МГц
@@ -289,5 +299,10 @@ void debugLedInit(void)
     GPIOC->CRH &= ~(GPIO_CRH_MODE13 | GPIO_CRH_CNF13);
     GPIOC->CRH |= (0b11 << GPIO_CRH_MODE13_Pos) | (0x00 << GPIO_CRH_CNF13_Pos);
     GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos); // Светодиод C13 выключается (set)
+
+    // Временно A15
+    GPIOA->CRH &= ~(GPIO_CRH_MODE15 | GPIO_CRH_CNF15);
+    GPIOA->CRH |= (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+    GPIOA->BSRR = (1<<GPIO_BSRR_BR15_Pos); // Светодиод A15 выключается (reset)
 }
 
