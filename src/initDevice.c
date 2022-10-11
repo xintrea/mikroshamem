@@ -301,8 +301,8 @@ void debugLedInit(void)
     GPIOC->BSRR = (1<<GPIO_BSRR_BS13_Pos); // Светодиод C13 выключается (set)
 
     // Временно A15
-    GPIOA->CRH &= ~(GPIO_CRH_MODE15 | GPIO_CRH_CNF15);
-    GPIOA->CRH |= (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
-    GPIOA->BSRR = (1<<GPIO_BSRR_BR15_Pos); // Светодиод A15 выключается (reset)
+    // GPIOA->CRH &= ~(GPIO_CRH_MODE15 | GPIO_CRH_CNF15);
+    // GPIOA->CRH |= (mode << GPIO_CRH_MODE15_Pos) | (cnf << GPIO_CRH_CNF15_Pos);
+    // GPIOA->BSRR = (1<<GPIO_BSRR_BR15_Pos); // Светодиод A15 выключается (reset)
 }
 

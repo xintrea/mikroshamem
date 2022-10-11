@@ -78,8 +78,8 @@ int main(void)
     // Задержка, чтобы Микроша успела нормально включиться
     delayMs(500);
 
-    // mainLoop();
-    blink();
+    mainLoop();
+    // blink();
 
     // setDebugLed(0, 1);
     // setDebugLed(1, 0);
@@ -109,6 +109,17 @@ void mainLoop()
         if( (GPIOB->IDR & (GPIO_IDR_IDR6_Msk )) == 0 )
         {
             addr=readAddressBus();
+
+            if(addr==0x8001)
+            {
+                setDebugLed(0, 1);
+            }
+
+            if(addr==0x8002)
+            {
+                setDebugLed(1, 1);
+            }
+
         }   
 
         
@@ -208,16 +219,16 @@ void blink()
         setDebugLed(1,1); // A0
         
         // Проверка B3, B4, A15
-        GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk;
-        GPIOA->BSRR = GPIO_BSRR_BR15_Msk;
+        // GPIOB->BSRR = GPIO_BSRR_BR3_Msk | GPIO_BSRR_BR4_Msk;
+        // GPIOA->BSRR = GPIO_BSRR_BR15_Msk;
 
         delayMs(500);
         setDebugLed(0,1); // C13
         setDebugLed(1,0); // A0
         
         // Проверка B3, B4, A15
-        GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk;
-        GPIOA->BSRR = GPIO_BSRR_BS15_Msk;
+        // GPIOB->BSRR = GPIO_BSRR_BS3_Msk | GPIO_BSRR_BS4_Msk;
+        // GPIOA->BSRR = GPIO_BSRR_BS15_Msk;
     } 
 }
 
